@@ -1,0 +1,90 @@
+// Prisma schema defining the DynamicForms data model
+// Based on requirements in Requirement.MD
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum FormStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  IN_PROGRESS
+  QUOTED
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  image       String?
+  role        Role         @default(USER)
+  accounts    Account[]
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model FormTemplate {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?
+  schema      Json
+  settings    Json
+  status      FormStatus   @default(DRAFT)
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Submission {
+  id             String       @id @default(cuid())
+  formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id])
+  formTemplateId String
+  user           User?        @relation(fields: [userId], references: [id])
+  userId         String?
+  guestEmail     String?
+  data           Json
+  files          Json?
+  status         LeadStatus   @default(NEW)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model FieldGroup {
+  id     String @id @default(cuid())
+  name   String @unique
+  fields Json
+}
